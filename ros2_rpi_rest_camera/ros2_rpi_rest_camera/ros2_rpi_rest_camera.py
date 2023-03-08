@@ -1,14 +1,11 @@
-import json
-
 # !/usr/bin/python3
-from rclpy.node import Node  # Handles the creation of nodes
-
 import rclpy
 import io
 import logging
 import socketserver
 from http import server
 from threading import Condition
+import json
 
 from picamera2 import Picamera2
 from picamera2.encoders import JpegEncoder
@@ -37,17 +34,22 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_header('Cache-Control', 'no-cache, private')
             self.send_header('Pragma', 'no-cache')
             self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+            self.end_headers()
             try:
-
-                with self.server.output.condition:
-                    self.server.output.condition.wait()
-                    frame = self.server.output.frame
-                self.send_header('Content-Type', 'image/jpeg')
-                self.send_header('Content-Length', len(frame))
-
-                self.end_headers()
-                self.wfile.write(frame)
-                self.wfile.write(b'\r\n')
+                while True:
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
+                    self.wfile.write(b'--FRAME\r\n')
+                    self.send_header('Content-Type', 'image/jpeg')
+                    self.send_header('Content-Length', len(frame))
+                    self.end_headers()
+                    self.wfile.write(frame)
+                    self.wfile.write(b'\r\n')
+            except Exception as e:
+                logging.warning(
+                    'Removed streaming client %s: %s',
+                    self.client_address, str(e))
             except Exception as e:
                 logging.warning(
                     'Removed streaming client %s: %s',
@@ -71,7 +73,6 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 width = decoded_json.get('width', 640)
                 height = decoded_json.get('height', 480)
 
-
                 if (StreamingHandler.width != width) or (StreamingHandler.height != height):
                     StreamingHandler.width = width
                     StreamingHandler.height = height
@@ -83,7 +84,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 with self.server.output.condition:
                     self.server.output.condition.wait()
                 frame = self.server.output.frame
-                # self.wfile.write(b'--FRAME\r\n')
+
                 self.send_header('Content-Type', 'image/jpeg')
                 self.send_header('Content-Length', len(frame))
 
@@ -108,7 +109,6 @@ picam2 = Picamera2()
 output = StreamingOutput()
 
 
-
 def main(args=None):
     print("RPI CAMERA")
     # Initialize the rclpy library
@@ -125,6 +125,7 @@ def main(args=None):
         picam2.stop_recording()
     # Shutdown the ROS client library for Python
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
