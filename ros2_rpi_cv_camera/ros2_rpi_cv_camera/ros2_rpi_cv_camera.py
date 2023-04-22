@@ -10,6 +10,8 @@ import cv2
 from cv_bridge import CvBridge
 import numpy as np
 
+import logging
+
 WIDTH = 640
 HEIGHT = 480
 
@@ -19,7 +21,15 @@ class ImagePublisher(Node):
     def __init__(self):
         super().__init__('image_publisher')
 
+        import logging
+
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+        logging.info('ROS2 PRI CV CAMERA CAMERA')
+
         self.publisher = self.create_publisher(Image, 'video_frames', 10)
+
+        self.declareParameters()
 
         self.configure_picamera()
 
@@ -27,11 +37,21 @@ class ImagePublisher(Node):
 
         self.br = CvBridge()
 
-        self.create_timer(FRAME_INTERVAL, self.image_callback)
+        self.create_timer(self.frame_interval, self.image_callback)
+
+    def declareParameters(self):
+        self.declare_parameter('width', WIDTH)
+        self.width = self.get_parameter('width').value
+
+        self.declare_parameter('height', HEIGHT)
+        self.height = self.get_parameter('height').value
+
+        self.declare_parameter('frame_interval', FRAME_INTERVAL)
+        self.frame_interval = self.get_parameter('frame_interval').value
 
     def configure_picamera(self):
         self.picam2 = Picamera2()
-        config = self.picam2.create_preview_configuration(lores={"size": (WIDTH, HEIGHT)})
+        config = self.picam2.create_preview_configuration(lores={"size": (self.width, self.height)})
         self.picam2.configure(config)
         self.picam2.start()
 

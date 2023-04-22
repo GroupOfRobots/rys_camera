@@ -1,4 +1,5 @@
 from setuptools import setup
+from glob import glob
 
 package_name = 'ros2_rpi_cv_camera'
 
@@ -7,7 +8,8 @@ setup(
     version='0.0.0',
     packages=[package_name],
     data_files=[
-        ('share/' + package_name, ['package.xml'])
+        ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, glob('launch/*launch.py'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
