@@ -10,7 +10,8 @@ def generate_launch_description():
             name='cv_camera',
             parameters=[
                 {'width': 640},
-                {'height': 480}
+                {'height': 480},
+                {'frame_interval': 0.1}
             ]
         ),
     ])

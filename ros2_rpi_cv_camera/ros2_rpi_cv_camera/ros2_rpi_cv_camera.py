@@ -12,22 +12,20 @@ import numpy as np
 
 import logging
 
-WIDTH = 640
-HEIGHT = 480
+DEFAULT_WIDTH = 640
+DEFAULT_HEIGHT = 480
 
-FRAME_INTERVAL = 0.1
+DEFAULT_FRAME_INTERVAL = 0.1
 
 class ImagePublisher(Node):
     def __init__(self):
         super().__init__('image_publisher')
 
-        import logging
-
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
         logging.info('ROS2 PRI CV CAMERA CAMERA')
 
-        self.publisher = self.create_publisher(Image, 'video_frames', 10)
+        self.publisher = self.create_publisher(Image, 'cv_video_frames', 10)
 
         self.declareParameters()
 
@@ -40,13 +38,13 @@ class ImagePublisher(Node):
         self.create_timer(self.frame_interval, self.image_callback)
 
     def declareParameters(self):
-        self.declare_parameter('width', WIDTH)
+        self.declare_parameter('width', DEFAULT_WIDTH)
         self.width = self.get_parameter('width').value
 
-        self.declare_parameter('height', HEIGHT)
+        self.declare_parameter('height', DEFAULT_HEIGHT)
         self.height = self.get_parameter('height').value
 
-        self.declare_parameter('frame_interval', FRAME_INTERVAL)
+        self.declare_parameter('frame_interval', DEFAULT_FRAME_INTERVAL)
         self.frame_interval = self.get_parameter('frame_interval').value
 
     def configure_picamera(self):
