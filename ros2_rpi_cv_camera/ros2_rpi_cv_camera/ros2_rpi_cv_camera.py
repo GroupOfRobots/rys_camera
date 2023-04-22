@@ -21,18 +21,19 @@ class ImagePublisher(Node):
 
         self.publisher = self.create_publisher(Image, 'video_frames', 10)
 
-        self.picam2 = Picamera2()
-        # self.picam2.configure(self.picam2.create_video_configuration(main={"size": (HEIGHT, WIDTH)}))
-        # config = self.picam2.create_preview_configuration(lores={"size": (640,480)})
-        config = self.picam2.create_preview_configuration(lores={"size": (640,480)})
-
-        self.picam2.configure(config)
-
-        self.picam2.start()
+        self.configure_picamera()
 
         self.frame_id = 0
 
+        self.br = CvBridge()
+
         self.create_timer(FRAME_INTERVAL, self.image_callback)
+
+    def configure_picamera(self):
+        self.picam2 = Picamera2()
+        config = self.picam2.create_preview_configuration(lores={"size": (WIDTH, HEIGHT)})
+        self.picam2.configure(config)
+        self.picam2.start()
 
     def get_time_msg(self):
         time_msg = Time()
@@ -41,18 +42,18 @@ class ImagePublisher(Node):
         time_msg.nanosec = int(msg_time[1])
         return time_msg
 
-    def image_callback(self):
+    def capture_image(self):
         yuv = self.picam2.capture_array("lores")
-        self.img = cv2.cvtColor(yuv, cv2.COLOR_YUV420p2RGB)[0:450, 100:540]
-        gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+        img = cv2.cvtColor(yuv, cv2.COLOR_YUV420p2RGB)[0:450, 100:540]
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         kernel = np.ones((5, 5), np.uint8)
         img_erosion = cv2.erode(gray, kernel, iterations=1)
-        ret, thresh = cv2.threshold(img_erosion, 127, 255, cv2.THRESH_BINARY_INV)
-        # Negative binn
-        # thresh = cv2.bitwise_not(thresh)
+        _, thresh = cv2.threshold(img_erosion, 127, 255, cv2.THRESH_BINARY_INV)
 
-        br = CvBridge()
-        msg = br.cv2_to_imgmsg(thresh)
+        return  self.br.cv2_to_imgmsg(thresh)
+
+    def image_callback(self):
+        msg = self.capture_image()
         msg.header.stamp = self.get_time_msg()
         self.frame_id += 1
         msg.header.frame_id = str(self.frame_id)
