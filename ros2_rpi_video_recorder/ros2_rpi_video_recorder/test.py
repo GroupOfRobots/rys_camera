@@ -8,15 +8,10 @@ from picamera2.encoders import MJPEGEncoder, JpegEncoder, H264Encoder
 from picamera2.outputs import FfmpegOutput
 import threading
 
-record123=True
+isRecording=True
 
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
-    # def __init__(self, request: bytes, client_address: tuple[str, int], server: socketserver.BaseServer):
-    #     super().__init__(request, client_address, server)
-    #
-    #     self.camera = Picamera2()
-
     def setResponse(self):
         self.send_response(200)
         self.send_header('Age', 0)
@@ -29,22 +24,17 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             print("start recording")
             self.setResponse()
 
-            encoder = MJPEGEncoder()
-
-            output_file = "output_video3.mp4"  # Change this to your desired output file path
-
             content_len = int(self.headers.get('Content-Length'))
             post_body = self.rfile.read(content_len)
             decoded_json = json.loads(post_body)
 
             width = decoded_json.get('width', 640)
             height = decoded_json.get('height', 480)
-            fileName = decoded_json.get('output', 'output')
+            picam2.configure(picam2.create_video_configuration(main={"size": (width, height)}))
 
-            output_file = fileName
-            print("fileName", fileName)
-            arg=str(fileName)
-            t = threading.Thread(target=test, args=[arg])
+            outputFileName = decoded_json.get('output', 'output')
+
+            t = threading.Thread(target=test, args=[outputFileName])
             t.start()
 
             self.send_response(200)
@@ -58,10 +48,10 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             pass
         if self.path == '/stop-recording':
             self.setResponse()
-            global record123
+            global isRecording
 
-            record123= False
-            # picam2.stop_recording()
+            isRecording= False
+
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -73,15 +63,15 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
 def test(fileName):
     print("test")
-    global record123
+    global isRecording
 
     encoder = MJPEGEncoder()
     output = FfmpegOutput(fileName)
 
     picam2.start_recording(encoder, output)
-    while record123:
+    while isRecording:
         time.sleep(1)
-    record123=False
+    isRecording=False
     picam2.stop_recording()
 
 
